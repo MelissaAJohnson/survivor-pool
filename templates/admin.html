@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Admin Panel</title>
+    </head>
+    <body>
+        <h2>Admin: Verify Users</h2>
+        <table border="1" cellpadding="8">
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Verified</th>
+                    <th>Picks</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.email }}</td>
+                    <td>{{ "Yes" if user.verified else "No" }}</td>
+                    <td>
+                        {% if user.picks %}
+                            <ul>
+                                {% for pick in user.picks %}
+                                    <li>Week {{ pick.week }}: {{ pick.team }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            No picks yet
+                        {% endif %}    
+                    </td>
+                    <td>
+                        {% if not user.verified %}
+                        <form action="/verify" method="post">
+                            <input type="hidden" name="email" value="{{ user.email }}">
+                            <button type="submit">Verify</button>
+                        </form>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <p><a href="/">Back to Home</a></p>
+    </body>
+</html>

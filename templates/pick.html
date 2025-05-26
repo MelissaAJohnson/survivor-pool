@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Make Your Pick</title>
+    </head>
+    <body>
+        {% if request.query_params.get("msg") %}
+            <p style="color: green;"><strong>{{ request.query_params.get("msg") }}</strong></p>
+        {% endif %}
+        {% if request.query_params.get("error") %}
+            <p style="color: red;"><strong>{{ request.query_params.get("error") }}</strong></p>
+        {% endif %}
+
+        <h2>Pick Your Team for This Week</h2>
+        <form action="/pick" method="post">
+            <label>Email:</label><br>
+            <input type="email" name="email" placeholder="Email" required /><br><br>
+
+            <label>Week #:</label><br>
+            <input type="number" name="week" min="1" max="18" required><br><br>
+
+            <label>Select Team:</label><br>
+            <select name="team" required>
+                {% for team in teams %}
+                    <option value="{{ team }}">{{ team }}</option>
+                {% endfor %}
+            </select><br><br>
+            <button type="submit">Submit Pick</button>
+        </form>
+        <p><a href="/">Back to Home</a></p>
+    </body>
+</html>
