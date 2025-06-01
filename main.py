@@ -73,7 +73,7 @@ def create_entry(
     db.refresh(entry)
     return {"message": f"Entry '{nickname}' created", "entry_id": entry.id}
 
-# ✅ Submit a pick for a given entry
+# ✅ Manage picks
 @app.post("/pick")
 def submit_pick(
     entry_id: int = Form(...),
@@ -107,6 +107,45 @@ def submit_pick(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/picks")
+def get_user_picks(email: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    picks = (
+        db.query(Pick)
+        .join(Entry)
+        .filter(Entry.user_id == user.id)
+        .all()
+    )
+
+    return [
+        {
+            "id": pick.id,
+            "entry_id": pick.entry_id,
+            "week": pick.week,
+            "team": pick.team
+        }
+        for pick in picks
+    ]
+
+@app.put("/pick/{pick_id}")
+def update_pick(
+    pick_id: int,
+    week: int = Form(...),
+    team: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    pick = db.query(Pick).filter(Pick.id == pick_id).first()
+    if not pick:
+        raise HTTPException(status_code=404, detail="Pick not found")
+    
+    pick.week = week
+    pick.team = team
+    db.commit()
+    return {"message": f"✅ Pick updated for Entry {pick.entry_id}, Week {week}"}
+
 # ✅ Show Users and their Entries
 @app.get("/admin")
 def admin_dashboard(db: Session = Depends(get_db)):
@@ -128,6 +167,7 @@ def admin_dashboard(db: Session = Depends(get_db)):
         result.append(user_data)
     return result
 
+# ✅ Require users to Login
 @app.post("/login")
 def login_user(email: str = Form(...), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == email).first()
@@ -135,6 +175,7 @@ def login_user(email: str = Form(...), db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Email not registered")
     return {"message": f"Welcome back, {email}!"}
 
+# ✅ Allow Adminstrator to verify user's entry
 @app.post("/verify-entry")
 def verify_entry(entry_id: int = Form(...), db: Session = Depends(get_db)):
     entry = db.query(Entry).filter(Entry.id == entry_id).first()
@@ -144,6 +185,7 @@ def verify_entry(entry_id: int = Form(...), db: Session = Depends(get_db)):
     db.commit()
     return {"message": f"Entry '{entry.nickname}' verified"}
 
+# ✅ Manage NFL Teams
 @app.get("/teams")
 def list_teams(db: Session = Depends(get_db)):
     return db.query(Team).all()

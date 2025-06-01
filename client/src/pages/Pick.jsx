@@ -6,6 +6,7 @@ export default function Pick() {
   const [teams, setTeams] = useState([]);
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
+  const [existingPicks, setExistingPicks] = useState([]);
 
   useEffect(() => {
     const userEmail = localStorage.getItem("userEmail");
@@ -17,6 +18,7 @@ export default function Pick() {
     setEmail(userEmail);
     fetchUserEntries(userEmail);
     fetchTeams();
+    fetchPicks(userEmail);
   }, []);
 
   const fetchUserEntries = async (userEmail) => {
@@ -48,6 +50,17 @@ export default function Pick() {
       console.error("Failed to fetch teams:", err);
     }
   };
+
+  const fetchPicks = async (email) => {
+    try {
+      const res = await fetch(`http://localhost:8000/picks?email=${email}`);
+      const data = await res.json();
+      console.log("Fetched picks:", data);
+      setExistingPicks(data);
+    } catch (err) {
+      console.error("Failed to fetch picks:", err);
+    }
+  }
 
   const handleInputChange = (entryId, field, value) => {
     setFormState(prev => ({
@@ -89,6 +102,28 @@ export default function Pick() {
     } catch (err) {
       console.error("Failed to submit pick:", err);
       setMessage("❌ Could not connect to backend.");
+    }
+  };
+
+  const handleEdit = async (pickId, week, team) => {
+    const formData = new URLSearchParams();
+    formData.append("week", week);
+    formData.append("team", team);
+
+    const res = await fetch(`http://localhost:8000/pick/${pickId}`, {
+      method: "PUT",
+      body: formData,
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      setMessage(`❌ ${data.detail || data.error}`);
+    } else {
+      setMessage(`✅ ${data.message}`);
+      fetchPicks(email);
     }
   };
 
@@ -150,6 +185,62 @@ export default function Pick() {
           </tbody>
         </table>
       )}
+
+    <h2 style={{ marginTop: "40px" }}>Your Existing Picks</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Entry ID</th>
+            <th>Week</th>
+            <th>Team</th>
+            <th>Update</th>
+          </tr>
+        </thead>
+        <tbody>
+          {existingPicks.map((pick) => (
+            <tr key={pick.id}>
+              <td>{pick.entry_id}</td>
+              <td>
+                <input
+                  type="number"
+                  value={pick.week}
+                  onChange={(e) =>
+                    setExistingPicks((prev) =>
+                      prev.map((p) =>
+                        p.id === pick.id ? { ...p, week: e.target.value } : p
+                      )
+                    )
+                  }
+                />
+              </td>
+              <td>
+                <select
+                  value={pick.team}
+                  onChange={(e) =>
+                    setExistingPicks((prev) =>
+                      prev.map((p) =>
+                        p.id === pick.id ? { ...p, team: e.target.value } : p
+                      )
+                    )
+                  }
+                >
+                  <option value="">-- Select Team --</option>
+                  {teams.map((team) => (
+                    <option key={team.id} value={team.name}>
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
+              </td>
+              <td>
+                <button onClick={() => handleEdit(pick.id, pick.week, pick.team)}>
+                  Save
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
