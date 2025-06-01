@@ -4,6 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from models import Base, User, Entry, Pick, Team
 from passlib.context import CryptContext
+from datetime import datetime, timedelta
 
 # App init
 app = FastAPI()
@@ -142,6 +143,13 @@ def update_pick(
     if not pick:
         raise HTTPException(status_code=404, detail="Pick not found")
     
+    # Deadline Check
+    now = datetime.utcnow()
+    deadline = get_week_deadline(week)
+
+    if now > deadline:
+        raise HTTPException(status_code=403, detail=f"Week {week} is locked - picks cannot be edited after {deadline} UTC")
+    
     pick.week = week
     pick.team = team
     db.commit()
@@ -218,3 +226,8 @@ def delete_team(team_id: int, db: Session = Depends(get_db)):
     db.delete(team)
     db.commit()
     return {"message": f"Team {team_id} deleted"}
+
+# Manage deadline
+def get_week_deadline(week: int) -> datetime:
+    base_deadline = datetime(2025, 6, 7, 18, 0)
+    return base_deadline + timedelta(weeks=week -1)

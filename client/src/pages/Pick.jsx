@@ -127,6 +127,13 @@ export default function Pick() {
     }
   };
 
+  const isWeekLocked = (week) => {
+    const now = new Date();
+    const baseDeadline = new Date(Date.UTC(2025, 5, 7, 18, 0));
+    const deadline = new Date(baseDeadline.getTime() + (week - 1) * 7 * 24 * 60 * 60 * 1000);
+    return now > deadline;
+  };
+
   return (
     <div>
       <h2>Make Picks</h2>
@@ -176,7 +183,10 @@ export default function Pick() {
                   </select>
                 </td>
                 <td>
-                  <button onClick={() => handleSubmit(entry.id)}>
+                  <button 
+                    disabled={isWeekLocked(pick.week)}
+                    style={{ opacity: isWeekLocked(pick.week) ? 0.5: 1 }}
+                    onClick={() => handleSubmit(entry.id)}>
                     Submit Pick
                   </button>
                 </td>
@@ -233,7 +243,10 @@ export default function Pick() {
                 </select>
               </td>
               <td>
-                <button onClick={() => handleEdit(pick.id, pick.week, pick.team)}>
+                <button 
+                  disabled={isWeekLocked(pick.week)}
+                  style={{ opacity: isWeekLocked(pick.week) ? 0.5: 1 }}
+                  onClick={() => handleEdit(pick.id, pick.week, pick.team)}>
                   Save
                 </button>
               </td>
