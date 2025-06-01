@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 export default function Pick() {
   const [entries, setEntries] = useState([]);
   const [formState, setFormState] = useState({});
+  const [teams, setTeams] = useState([]);
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
 
@@ -15,6 +16,7 @@ export default function Pick() {
 
     setEmail(userEmail);
     fetchUserEntries(userEmail);
+    fetchTeams();
   }, []);
 
   const fetchUserEntries = async (userEmail) => {
@@ -34,6 +36,16 @@ export default function Pick() {
     } catch (err) {
       console.error("Failed to fetch entries:", err);
       setMessage("Could not load entries.");
+    }
+  };
+
+  const fetchTeams = async () => {
+    try {
+      const res = await fetch("http://localhost:8000/teams");
+      const data = await res.json();
+      setTeams(data);
+    } catch (err) {
+      console.error("Failed to fetch teams:", err);
     }
   };
 
@@ -114,15 +126,19 @@ export default function Pick() {
                   />
                 </td>
                 <td>
-                  <input
-                    type="text"
+                  <select
                     value={formState[entry.id]?.team || ''}
                     onChange={(e) =>
                       handleInputChange(entry.id, 'team', e.target.value)
                     }
-                    placeholder="Team name"
                     required
-                  />
+                  >
+                    <option value="">-- Select Team --</option>
+                    {teams.map(team => (
+                      <option key={team.id} value={team.name}>{team.name}
+                      </option>
+                    ))}
+                  </select>
                 </td>
                 <td>
                   <button onClick={() => handleSubmit(entry.id)}>

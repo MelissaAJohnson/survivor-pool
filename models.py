@@ -17,9 +17,9 @@ class Entry(Base):
     __tablename__ = "entries"
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
     nickname = Column(String)
     verified = Column(Boolean, default=False)
+    user_id = Column(Integer, ForeignKey("users.id"))
 
     user = relationship("User", back_populates="entries")
     picks = relationship("Pick", back_populates="entry")
@@ -28,7 +28,7 @@ class Pick(Base):
     __tablename__ = "picks"
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("entries.id"))
+    entry_id = Column(Integer, ForeignKey("entries.id"), nullable=False)
     week = Column(Integer, nullable=False)
     team = Column(String, nullable=False)
 

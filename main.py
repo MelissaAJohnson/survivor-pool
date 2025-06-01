@@ -74,28 +74,40 @@ def create_entry(
     return {"message": f"Entry '{nickname}' created", "entry_id": entry.id}
 
 # ✅ Submit a pick for a given entry
-@app.post ("/pick")
+@app.post("/pick")
 def submit_pick(
     entry_id: int = Form(...),
     week: int = Form(...),
     team: str = Form(...),
     db: Session = Depends(get_db)
 ):
-    entry = db.query(Entry).filter(Entry.id == entry_id).first()
-    if not entry:
-        return {"error": "Entry not found"}
-    if not entry.verified:
-        return {"error": "Entry is not verified by Admin."}
-    
-    existing_pick = db.query(Pick).filter_by(entry_id=entry_id, week=week).first()
-    if existing_pick:
-        return {"error": "Pick already submitted for this week."}
-    
-    pick = Pick(entry_id=entry_id, week=week, team=team)
-    db.add(pick)
-    db.commit()
-    return {"message": f"Pick submitted for Week {week}"}
+    # Confirm entry exists
+    try:
+        entry = db.query(Entry).filter(Entry.id == entry_id).first()
+        if not entry:
+            raise HTTPException(status_code=404, detail="Entry not found")
 
+        if not entry.verified:
+            raise HTTPException(status_code=403, detail="Entry is not verified by Admin.")
+
+        # Check for existing pick
+        existing_pick = db.query(Pick).filter_by(entry_id=entry_id, week=week).first()
+        if existing_pick:
+            raise HTTPException(status_code=400, detail="Pick already submitted for this week.")
+
+        # Create new pick
+        pick = Pick(entry_id=entry_id, week=week, team=team)
+        db.add(pick)
+        db.commit()
+
+        return {"message": f"✅ Pick submitted for Week {week} — {team}"}
+    
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ✅ Show Users and their Entries
 @app.get("/admin")
 def admin_dashboard(db: Session = Depends(get_db)):
     users = db.query(User).all()
