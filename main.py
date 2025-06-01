@@ -114,8 +114,8 @@ def get_user_picks(email: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
 
     picks = (
-        db.query(Pick)
-        .join(Entry)
+        db.query(Pick, Entry)
+        .join(Entry, Pick.entry_id == Entry.id)
         .filter(Entry.user_id == user.id)
         .all()
     )
@@ -123,11 +123,12 @@ def get_user_picks(email: str, db: Session = Depends(get_db)):
     return [
         {
             "id": pick.id,
-            "entry_id": pick.entry_id,
+            "entry_id": entry.id,
+            "entry_nickname": entry.nickname,
             "week": pick.week,
             "team": pick.team
         }
-        for pick in picks
+        for pick, entry in picks
     ]
 
 @app.put("/pick/{pick_id}")

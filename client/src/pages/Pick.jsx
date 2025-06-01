@@ -190,7 +190,7 @@ export default function Pick() {
       <table>
         <thead>
           <tr>
-            <th>Entry ID</th>
+            <th>Entry Name</th>
             <th>Week</th>
             <th>Team</th>
             <th>Update</th>
@@ -199,7 +199,7 @@ export default function Pick() {
         <tbody>
           {existingPicks.map((pick) => (
             <tr key={pick.id}>
-              <td>{pick.entry_id}</td>
+              <td>{pick.entry_nickname}</td>
               <td>
                 <input
                   type="number"
