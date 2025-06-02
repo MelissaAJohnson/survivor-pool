@@ -30,8 +30,8 @@ function AppContent() {
   
         {loggedInEmail ? (
           <>
-            <Link to="/entry" style={{ marginRight: '15px' }}>Create Entry</Link>
-            <Link to="/pick" style={{ marginRight: '15px' }}>Make Pick</Link>
+            <Link to="/entry" style={{ marginRight: '15px' }}>New Entry</Link>
+            <Link to="/pick" style={{ marginRight: '15px' }}>My Picks</Link>
             <Link to="/admin" style={{ marginRight: '15px' }}>Admin</Link>
             <Link to="/teams" style={{ marginRight: '15px' }}>Teams</Link>
             <button onClick={handleLogout}>Log Out</button>

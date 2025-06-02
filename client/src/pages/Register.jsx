@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
+import { useNavigate } from "react-router-dom";
 
 export default function Register() {
   const [email, setEmail] = useState('');
+  const [error, setError] = useState("");
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,33 +24,31 @@ export default function Register() {
         }
       });
 
-      const text = await response.text();
+      const data = await res.json();
 
-      if (!response.ok) {
-        console.error("Backend returned error:", text);
-        setMessage(`❌ Error: ${text}`);
-        return;
+      if (res.ok) {
+        localStorage.setItem("userEmail", email);
+        navigate("/entry");
+      } else {
+        setError(data.detail || "Registration failed.");
       }
-
-      const data = JSON.parse(text);
-      setMessage(`✅ ${data.message}`);
-      setEmail('');
-      setPassword('');
     } catch (err) {
       console.error("Register failed:", err);
-      setMessage("❌ Could not connect to backend.");
+      setError("❌ Could not connect to backend.");
     }
   };
 
   return (
-    <div>
+    <div style={{ maxWidth: "400px", margin: "auto" }}>
       <h2>Register</h2>
+      {error && <p style={{ color:"red" }}>{error}</p>}
       <form onSubmit={handleSubmit}>
         <input
           type="email"
           placeholder="Email"
           value={email}
-          onChange={e => setEmail(e.target.value)}
+          onChange={(e) => setEmail(e.target.value.trim())}
+          style={{ width: "100%", marginBottom: "1rem"}}
           required
         /><br /><br />
         <input
@@ -55,6 +56,7 @@ export default function Register() {
           placeholder="Password"
           value={password}
           onChange={e => setPassword(e.target.value)}
+          style={{ width: "100%", marginBottom: "1rem"}}
           required
         /><br /><br />
         <button type="submit">Register</button>
