@@ -42,6 +42,17 @@ export default function Pick() {
     setEntries(data.filter((entry) => entry.verified));
   };
 
+  const getTeamsPickedPerEntry = () => {
+    const mapping = {};
+    existingPicks.forEach((pick) => {
+      if (!mapping[pick.entry_id]) {
+        mapping[pick.entry_id] = new Set();
+      }
+      mapping[pick.entry_id].add(pick.team);
+    });
+    return mapping;
+  };
+
   const fetchTeams = async () => {
     const res = await fetch("http://localhost:8000/teams");
     const data = await res.json();
@@ -54,6 +65,8 @@ export default function Pick() {
     console.log("Fetched picks:", data);
     setExistingPicks(data);
   };
+  
+  const teamsPicked = getTeamsPickedPerEntry();
 
   const handleSubmit = async (entryId, week, team) => {
     if (!week || !team) {
@@ -150,10 +163,16 @@ export default function Pick() {
                     required
                   >
                     <option value="">-- Select Team --</option>
-                    {teams.map(team => (
-                      <option key={team.id} value={team.name}>{team.name}
-                      </option>
-                    ))}
+                    {teams
+                      .filter((team) => {
+                        const picked = teamsPicked[entry.id];
+                        return !picked || !picked.has(team.name);
+                      })
+                      .map((team) => (
+                        <option key={team.id} value={team.name}>
+                          {team.name}
+                        </option>
+                      ))}
                   </select>
                 </td>
                 <td>
