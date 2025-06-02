@@ -1,30 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import LoginForm from '../components/LoginForm';
+import { useAuth } from "../context/AuthContext";
 import CountdownTimer from '../components/CountdownTimer';
 
 export default function Home() {
-  const [email, setEmail] = useState('');
+  const { email } = useAuth();
+  const [error, setError] = useState("");
   const upcomingWeeks = [1, 2, 3];
-
-  useEffect(() => {
-    const stored = localStorage.getItem("userEmail");
-    if (stored) {
-      setEmail(stored);
-    }
-  }, []);
 
   return (
     <div>
       <h1>Welcome to the Office Survivor Pool!</h1>
       {email ? (
-        <p>✅ Logged in as <strong>{email}</strong></p>
+        <p>You are logged in as <strong>{email}</strong></p>
       ) : (
-        <>
-          <p>Please log in to continue:</p>
-          <LoginForm onLogin={(email) => setEmail(email)} />
-        </>
+        <LoginForm />
       )}
-
       <h3>⏳ Weekly Pick Deadlines</h3>
       <table border="1" cellPadding="8" style={{ borderCollapse: "collapse" }}>
         <thead>

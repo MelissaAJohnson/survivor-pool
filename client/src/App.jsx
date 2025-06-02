@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
+import Navbar from "./components/Navbar";
 import Home from './pages/Home';
 import Register from './pages/Register';
 import EntryForm from './pages/EntryForm';
@@ -22,25 +23,12 @@ function AppContent() {
     setLoggedInEmail(null);
     navigate('/');
   };
-  
-  return (
-    <>
-      <nav style={{ marginBottom: '20px' }}>
-        <Link to="/" style={{ marginRight: '15px' }}>Home</Link>
-  
-        {loggedInEmail ? (
-          <>
-            <Link to="/entry" style={{ marginRight: '15px' }}>New Entry</Link>
-            <Link to="/pick" style={{ marginRight: '15px' }}>My Picks</Link>
-            <Link to="/admin" style={{ marginRight: '15px' }}>Admin</Link>
-            <Link to="/teams" style={{ marginRight: '15px' }}>Teams</Link>
-            <button onClick={handleLogout}>Log Out</button>
-          </>
-        ) : (
-          <Link to="/register" style={{ marginRight: '15px' }}>Register</Link>
-        )}
-      </nav>
+}
 
+export default function App() {
+  return (
+    <div>
+      <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/register" element={<Register />} />
@@ -61,14 +49,6 @@ function AppContent() {
           element={<ProtectedRoute><TeamAdmin /></ProtectedRoute>} 
         />
       </Routes>
-    </>
-  );
-}
-
-export default function App() {
-  return (
-    <Router>
-      <AppContent />
-    </Router>
+    </div>
   );
 }
