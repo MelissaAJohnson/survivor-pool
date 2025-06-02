@@ -1,67 +1,59 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from "../context/AuthContext"
 
-export default function LoginForm({ onLogin }) {
-  const [email, setEmail] = useState('');
-  const [message, setMessage] = useState('');
+export default function LoginForm() {
+  const { login } = useAuth();
+  const [inputEmail, setInputEmail] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
-
-    const formData = new URLSearchParams();
-    formData.append("email", email);
+    setError("");
+    setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:8000/login", {
-        method: "POST",
-        body: formData,
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-      });
+      const res = await fetch(`http://localhost:8000/entries?email=${inputEmail.trim().toLowerCase()}`);
+      const data = await res.json();
 
-      const text = await res.text();
-      if (!res.ok) {
-        setMessage(`❌ ${text}`);
-        return;
-      }
+      if (res.ok && Array.isArray(data)) {
+        login(inputEmail.trim().toLowerCase());
 
-      const data = JSON.parse(text);
-      localStorage.setItem("userEmail", email);
-      if (onLogin) onLogin(email);
-      setMessage(`✅ ${data.message}`);
-
-      // Fetch user entry info
-      const adminRes = await fetch("http://localhost:8000/admin");
-      const users = await adminRes.json();
-      const currentUser = users.find(u => u.email === email);
-
-      if (currentUser?.entries?.length > 0) {
-        navigate("/pick"); // has entries
+        //Delay just enough to let context propogate
+        setTimeout(() => {
+          const hasEntries = data.length > 0;
+          navigate(hasEntries ? "/pick" : "/entry");
+        }, 100);
       } else {
-        navigate("/entry"); // no entries yet
+        setError("Login failed: email not found.");
       }
-
     } catch (err) {
-      console.error("Login failed:", err);
-      setMessage("❌ Could not connect to server.");
+      console.error("Login error:", err);
+      setError("Something went wrong. Please try again.");      
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div>
-      <form onSubmit={handleLogin}>
-        <input
-          type="email"
-          placeholder="Enter your email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          required
-        /><br /><br />
-        <button type="submit">Log In</button>
-      </form>
-      {message && <p style={{ fontWeight: "bold" }}>{message}</p>}
-    </div>
+    <form onSubmit={handleLogin}>
+      <label htmlFor="email">Enter your email to log in:</label>
+      <input
+        id="email"
+        type="email"
+        required
+        value={inputEmail}
+        onChange={(e) => setInputEmail(e.target.value)}
+        placeholder="Enter your email"
+        style={{ display: "block", width: "75%", margin: "1rem 0", padding: "0.5rem" }}
+        disabled={loading}
+      />
+      <button type="submit" disabled={loading} style={{ padding: "0.5rem 1rem" }}>
+        {loading ? "Logging in ..." : "Log In"}
+      </button>
+      {error && <p style={{ color: "red", marginTop: "1rem" }}>{error}</p>}
+    </form>
   );
 }

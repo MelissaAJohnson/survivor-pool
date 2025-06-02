@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 
 export default function Navbar() {
     const { email, logout } = useAuth();
+    const navigate = useNavigate();
 
     return (
         <nav style={{ padding: "1rem", background: "#eee", marginBottom: "1rem" }}>

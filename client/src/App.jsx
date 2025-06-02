@@ -10,13 +10,15 @@ import TeamAdmin from './pages/TeamAdmin';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function AppContent() {
-  const [loggedInEmail, setLoggedInEmail] = useState(null);
+  // const [loggedInEmail, setLoggedInEmail] = useState(null);
+  const { email } = useAuth();
   const navigate = useNavigate();
   
   useEffect(() => {
-    const email = localStorage.getItem("userEmail");
-    if (email) setLoggedInEmail(email);
-  }, []);
+    if (email) {
+      // Only navigate after login if needed
+    }
+  }, [email]);
   
   const handleLogout = () => {
     localStorage.removeItem("userEmail");
