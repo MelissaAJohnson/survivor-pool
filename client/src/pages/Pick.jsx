@@ -1,12 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from "react";
 
 export default function Pick() {
   const [entries, setEntries] = useState([]);
-  const [formState, setFormState] = useState({});
   const [teams, setTeams] = useState([]);
-  const [email, setEmail] = useState('');
-  const [message, setMessage] = useState('');
   const [existingPicks, setExistingPicks] = useState([]);
+  const [message, setMessage] = useState("");
+  const [email, setEmail] = useState("");
+  const [formState, setFormState] = useState({});
+
+  // Lock logic: Sunday 1PM ET (18:00 UTC)
+  const isWeekLocked = (week) => {
+    const baseDeadline = new Date(Date.UTC(2025, 8, 7, 18, 0)); // Sept 7, 2025
+    const deadline = new Date(
+      baseDeadline.getTime() + (week - 1) * 7 * 24 * 60 * 60 * 1000
+    );
+    return new Date() > deadline;
+  };
 
   useEffect(() => {
     const userEmail = localStorage.getItem("userEmail");
@@ -14,130 +23,85 @@ export default function Pick() {
       setMessage("You must be logged in to make picks.");
       return;
     }
-
     setEmail(userEmail);
-    fetchUserEntries(userEmail);
+
+    fetchEntries(userEmail);
     fetchTeams();
     fetchPicks(userEmail);
   }, []);
 
-  const fetchUserEntries = async (userEmail) => {
-    try {
-      const res = await fetch("http://localhost:8000/admin");
-      const data = await res.json();
-      const user = data.find(u => u.email === userEmail);
-      const verifiedEntries = user?.entries.filter(e => e.verified) || [];
-      setEntries(verifiedEntries);
-
-      // Init form state
-      const initialState = {};
-      verifiedEntries.forEach(entry => {
-        initialState[entry.id] = { week: '', team: '' };
-      });
-      setFormState(initialState);
-    } catch (err) {
-      console.error("Failed to fetch entries:", err);
-      setMessage("Could not load entries.");
+  const fetchEntries = async (email) => {
+    const res = await fetch(`http://localhost:8000/entries?email=${email}`);
+    const data = await res.json();
+    console.log("Entries API response:", data);
+    if (!Array.isArray(data)) {
+      console.error("Expected array but got:", data);
+      setMessage(data.detail || "Failed to load entries");
+      return;
     }
+    setEntries(data.filter((entry) => entry.verified));
   };
 
   const fetchTeams = async () => {
-    try {
-      const res = await fetch("http://localhost:8000/teams");
-      const data = await res.json();
-      setTeams(data);
-    } catch (err) {
-      console.error("Failed to fetch teams:", err);
-    }
+    const res = await fetch("http://localhost:8000/teams");
+    const data = await res.json();
+    setTeams(data);
   };
 
   const fetchPicks = async (email) => {
-    try {
-      const res = await fetch(`http://localhost:8000/picks?email=${email}`);
-      const data = await res.json();
-      console.log("Fetched picks:", data);
-      setExistingPicks(data);
-    } catch (err) {
-      console.error("Failed to fetch picks:", err);
-    }
-  }
-
-  const handleInputChange = (entryId, field, value) => {
-    setFormState(prev => ({
-      ...prev,
-      [entryId]: {
-        ...prev[entryId],
-        [field]: value
-      }
-    }));
+    const res = await fetch(`http://localhost:8000/picks?email=${email}`);
+    const data = await res.json();
+    console.log("Fetched picks:", data);
+    setExistingPicks(data);
   };
 
-  const handleSubmit = async (entryId) => {
-    const { week, team } = formState[entryId];
-    const formData = new URLSearchParams();
+  const handleSubmit = async (entryId, week, team) => {
+    if (!week || !team) {
+      setMessage("Please select both week and team.");
+      return;
+    }
+
+    const formData = new FormData();
     formData.append("entry_id", entryId);
     formData.append("week", week);
     formData.append("team", team);
 
-    try {
-      const res = await fetch("http://localhost:8000/pick", {
-        method: "POST",
-        body: formData,
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-      });
+    const res = await fetch("http://localhost:8000/pick", {
+      method: "POST",
+      body: formData,
+    });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setMessage(`❌ Entry ${entryId}: ${data.error || data.detail}`);
-      } else {
-        setMessage(`✅ Entry ${entryId}: ${data.message}`);
-        setFormState(prev => ({
-          ...prev,
-          [entryId]: { week: '', team: '' }
-        }));
-      }
-    } catch (err) {
-      console.error("Failed to submit pick:", err);
-      setMessage("❌ Could not connect to backend.");
+    const data = await res.json();
+    if (res.ok) {
+      setMessage(data.message);
+      fetchPicks(email);
+    } else {
+      setMessage(data.error || "Something went wrong.");
     }
   };
 
   const handleEdit = async (pickId, week, team) => {
-    const formData = new URLSearchParams();
+    const formData = new FormData();
     formData.append("week", week);
     formData.append("team", team);
 
     const res = await fetch(`http://localhost:8000/pick/${pickId}`, {
       method: "PUT",
       body: formData,
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
     });
 
     const data = await res.json();
-    if (!res.ok) {
-      setMessage(`❌ ${data.detail || data.error}`);
-    } else {
-      setMessage(`✅ ${data.message}`);
+    if (res.ok) {
+      setMessage(data.message);
       fetchPicks(email);
+    } else {
+      setMessage(data.detail || "Edit failed.");
     }
-  };
-
-  const isWeekLocked = (week) => {
-    const now = new Date();
-    const baseDeadline = new Date(Date.UTC(2025, 5, 7, 18, 0));
-    const deadline = new Date(baseDeadline.getTime() + (week - 1) * 7 * 24 * 60 * 60 * 1000);
-    return now > deadline;
   };
 
   return (
     <div>
       <h2>Make Picks</h2>
-
       {message && <p style={{ fontWeight: "bold", marginBottom: "20px" }}>{message}</p>}
 
       {entries.length === 0 ? (
@@ -184,8 +148,6 @@ export default function Pick() {
                 </td>
                 <td>
                   <button 
-                    disabled={isWeekLocked(pick.week)}
-                    style={{ opacity: isWeekLocked(pick.week) ? 0.5: 1 }}
                     onClick={() => handleSubmit(entry.id)}>
                     Submit Pick
                   </button>
@@ -196,14 +158,14 @@ export default function Pick() {
         </table>
       )}
 
-    <h2 style={{ marginTop: "40px" }}>Your Existing Picks</h2>
-      <table>
+      <h3>📝 Existing Picks</h3>
+      <table border="1" cellPadding="8" style={{ marginTop: "1rem" }}>
         <thead>
           <tr>
-            <th>Entry Name</th>
+            <th>Entry</th>
             <th>Week</th>
             <th>Team</th>
-            <th>Update</th>
+            <th>Save</th>
           </tr>
         </thead>
         <tbody>
@@ -217,7 +179,9 @@ export default function Pick() {
                   onChange={(e) =>
                     setExistingPicks((prev) =>
                       prev.map((p) =>
-                        p.id === pick.id ? { ...p, week: e.target.value } : p
+                        p.id === pick.id
+                          ? { ...p, week: e.target.value }
+                          : p
                       )
                     )
                   }
@@ -229,7 +193,9 @@ export default function Pick() {
                   onChange={(e) =>
                     setExistingPicks((prev) =>
                       prev.map((p) =>
-                        p.id === pick.id ? { ...p, team: e.target.value } : p
+                        p.id === pick.id
+                          ? { ...p, team: e.target.value }
+                          : p
                       )
                     )
                   }
@@ -243,10 +209,13 @@ export default function Pick() {
                 </select>
               </td>
               <td>
-                <button 
+                <button
                   disabled={isWeekLocked(pick.week)}
-                  style={{ opacity: isWeekLocked(pick.week) ? 0.5: 1 }}
-                  onClick={() => handleEdit(pick.id, pick.week, pick.team)}>
+                  style={{ opacity: isWeekLocked(pick.week) ? 0.5 : 1 }}
+                  onClick={() =>
+                    handleEdit(pick.id, pick.week, pick.team)
+                  }
+                >
                   Save
                 </button>
               </td>

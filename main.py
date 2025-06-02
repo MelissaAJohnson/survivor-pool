@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Form, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker, Session
 from models import Base, User, Entry, Pick, Team
 from passlib.context import CryptContext
@@ -73,6 +73,23 @@ def create_entry(
     db.commit()
     db.refresh(entry)
     return {"message": f"Entry '{nickname}' created", "entry_id": entry.id}
+
+@app.get("/entries")
+def get_user_entries(email: str, db: Session = Depends(get_db)):
+    email = email.strip().lower()
+    user = db.query(User).filter(func.lower(User.email) == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    entries = db.query(Entry).filter(Entry.user_id == user.id).all()
+    return [
+        {
+            "id": e.id,
+            "nickname": e.nickname,
+            "verified": e.verified
+        }
+        for e in entries
+    ]
 
 # ✅ Manage picks
 @app.post("/pick")
