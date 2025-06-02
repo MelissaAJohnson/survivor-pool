@@ -99,6 +99,16 @@ export default function Pick() {
     }
   };
 
+  const handleInputChange = (entryId, field, value) => {
+    setFormState((prev) => ({
+      ...prev,
+      [entryId]: {
+        ...prev[entryId],
+        [field]: value,
+      },
+    }));
+  };
+
   return (
     <div>
       <h2>Make Picks</h2>
@@ -148,7 +158,10 @@ export default function Pick() {
                 </td>
                 <td>
                   <button 
-                    onClick={() => handleSubmit(entry.id)}>
+                    disabled={isWeekLocked(formState[entry.id]?.week)}
+                    style={{ opacity: isWeekLocked(formState[entry.id]?.week) ? 0.5 : 1 }}
+                    onClick={() => 
+                      handleSubmit(entry.id, formState[entry.id]?.week, formState[entry.id]?.team)}>
                     Submit Pick
                   </button>
                 </td>
