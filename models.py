@@ -11,6 +11,8 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     email = Column(String, unique=True, nullable=False)
     hashed_password = Column(String, nullable=False)
+    verified = Column(Boolean, default=False)
+    role = Column(Boolean, default=False)
     entries = relationship("Entry", back_populates="user")
 
 class Entry(Base):

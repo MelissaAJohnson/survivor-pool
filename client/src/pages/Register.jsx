@@ -1,70 +1,70 @@
-import React, { useState } from 'react';
-import { useNavigate } from "react-router-dom";
+import React, { useState } from "react";
 
 export default function Register() {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [password, setPassword] = useState('');
-  const [message, setMessage] = useState('');
-  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    const formData = new URLSearchParams();
-    formData.append("email", email);
-    formData.append("password", password);
+    setError("");
+    setLoading(true);
 
     try {
+      const formData = new FormData();
+      formData.append("email", email);
+      formData.append("password", password);
+
       const response = await fetch("http://localhost:8000/register", {
         method: "POST",
         body: formData,
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded"
-        }
       });
 
-      const data = await res.json();
+      const data = await response.json();
 
-      if (res.ok) {
-        localStorage.setItem("userEmail", email);
-        navigate("/entry");
+      if (!response.ok) {
+        setError(data.error || "Registration failed.");
       } else {
-        setError(data.detail || "Registration failed.");
+        alert("✅ Registered! Check the console for confirmation link.");
+        setEmail("");
+        setPassword("");
       }
     } catch (err) {
-      console.error("Register failed:", err);
-      setError("❌ Could not connect to backend.");
+      console.error("Register error:", err);
+      setError("Something went wrong.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div style={{ maxWidth: "400px", margin: "auto" }}>
+    <form onSubmit={handleSubmit}>
       <h2>Register</h2>
-      {error && <p style={{ color:"red" }}>{error}</p>}
-      <form onSubmit={handleSubmit}>
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value.trim())}
-          style={{ width: "100%", marginBottom: "1rem"}}
-          required
-        /><br /><br />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          style={{ width: "100%", marginBottom: "1rem"}}
-          required
-        /><br /><br />
-        <button type="submit">Register</button>
-      </form>
 
-      {message && (
-        <p style={{ marginTop: "15px", fontWeight: "bold" }}>{message}</p>
-      )}
-    </div>
+      <input
+        type="email"
+        placeholder="Email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+        disabled={loading}
+      />
+
+      <input
+        type="password"
+        placeholder="Password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        required
+        disabled={loading}
+      />
+
+      <button type="submit" disabled={loading}>
+        {loading ? "Registering..." : "Register"}
+      </button>
+
+      {error && <p style={{ color: "red" }}>{error}</p>}
+    </form>
   );
 }

@@ -1,11 +1,27 @@
 from fastapi import FastAPI, Form, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker, Session
 from models import Base, User, Entry, Pick, Team
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
+from jose import jwt, JWTError
 
+#JWT Setup
+SECRET_KEY = "super-secret-key"
+ALGORITHM = "HS256"
+
+# ✅ Password hasher
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+#Hash the password
+def hash_password(password: str):
+    return pwd_context.hash(password)
+
+#Verify password
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
 # App init
 app = FastAPI()
 
@@ -24,8 +40,7 @@ engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(bind=engine)
 Base.metadata.create_all(bind=engine)
 
-# ✅ Password hasher
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 
 # ✅ Dependency to get DB session
 def get_db():
@@ -43,20 +58,52 @@ def register_user(
     db: Session = Depends(get_db)
 ):
     #Check if user already exists
-    if db.query(User).filter(User.email == email).first():
-        raise HTTPException(status_code=400, detail="User already exists")
+    existing_user = db.query(User).filter(User.email == email).first()
+    if existing_user:
+        return JSONResponse(status_code=400, content={"error": "User already exists"})
     
-    #Hash the password
-    hashed_pw = pwd_context.hash(password)
-
-    #Create and save user
-    user = User(email=email, hashed_password=hashed_pw)
-    db.add(user)
+    hashed_pw = hash_password(password)
+    new_user = User(email=email, hashed_password=hashed_pw, verified=False)
+    db.add(new_user)
     db.commit()
-    db.refresh(user)
 
-    return {"message": f"{email} registered successfully."}
+    #Generate token for email confirmation
+    token = jwt.encode({"sub": email}, SECRET_KEY, algorithm=ALGORITHM)
+    confirm_url = f"http://localhost:8000/confirm?token={token}"
 
+    print("Email confirmation link", confirm_url)
+
+    return {"message": "User registered successfully. Please confirm your email.", "confirm_url": confirm_url}
+
+
+# ✅ Confirm user
+@app.get("/confirm")
+def confirm_email(token: str, db: Session = Depends(get_db)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email = payload.get("sub")
+
+        if not email:
+            return JSONResponse(status_code=400, content={"error": "Invalid token"})
+
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+            return JSONResponse(status_code=404, content={"error": "User not found"})
+
+        if user.verified:
+            return {"message": "Email already confirmed."}
+
+        user.verified = True
+        db.commit()
+        return {"message": "Email successfully confirmed!"}
+
+    except JWTError as e:
+        return JSONResponse(status_code=400, content={"error": f"Invalid or expired token: {str(e)}"})
+
+    except Exception as e:
+        print("❌ Internal error:", str(e))
+        return JSONResponse(status_code=500, content={"error": "Internal server error"})
+    
 # ✅ Create a new entry for a user
 @app.post("/entry")
 def create_entry(
@@ -195,11 +242,23 @@ def admin_dashboard(db: Session = Depends(get_db)):
 
 # ✅ Require users to Login
 @app.post("/login")
-def login_user(email: str = Form(...), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == email).first()
+def login_user(
+    email: str = Form(...),
+    password: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter_by(email=email).first()
+
     if not user:
-        raise HTTPException(status_code=401, detail="Email not registered")
-    return {"message": f"Welcome back, {email}!"}
+        return JSONResponse(status_code=400, content={"error": "Invalid email or password"})
+
+    if not verify_password(password, user.hashed_password):
+        return JSONResponse(status_code=400, content={"error": "Invalid email or password"})
+
+    if not user.verified:
+        return JSONResponse(status_code=403, content={"error": "Email not confirmed"})
+
+    return {"message": "Login successful", "email": user.email}
 
 # ✅ Allow Adminstrator to verify user's entry
 @app.post("/verify-entry")
