@@ -14,6 +14,7 @@ export default function Navbar() {
                     <Link to="/entry" style={{ marginRight: "1rem" }}>Create Entry</Link>
                     <Link to="/pick" style={{ marginRight: "1rem" }}>My Picks</Link>
                     <Link to="/admin" style={{ marginRight: "1rem" }}>Admin</Link>
+                    <Link to="/teams" style={{ marginRight: "1rem" }}>Teams</Link>
                     <button
                         onClick={() => {
                             logout();
