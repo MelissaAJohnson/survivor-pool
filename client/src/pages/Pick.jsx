@@ -67,7 +67,16 @@ export default function Pick() {
   };
   
   const teamsPicked = getTeamsPickedPerEntry();
-  const currentWeek = 1;
+  const SEASON_START = new Date("2025-06-08");
+  const currentWeek = getCurrentWeek();
+
+  function getCurrentWeek() {
+    const today = new Date();
+    const diffInMs = today - SEASON_START;
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+    const weekNumber = Math.floor(diffInDays / 7) + 1;
+    return Math.max(1, weekNumber); //never less than Week 1
+  }
 
   const handleSubmit = async (entryId, week, team) => {
     if (formState[entry.id]?.week !== currentWeek) {
