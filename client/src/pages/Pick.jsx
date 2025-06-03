@@ -139,6 +139,7 @@ export default function Pick() {
   return (
     <div>
       <h2>Make Picks</h2>
+      <p>Current Week: {currentWeek}</p>
       {message && <p style={{ fontWeight: "bold", marginBottom: "20px" }}>{message}</p>}
 
       {entries.length === 0 ? (
