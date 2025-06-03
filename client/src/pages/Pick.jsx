@@ -67,8 +67,13 @@ export default function Pick() {
   };
   
   const teamsPicked = getTeamsPickedPerEntry();
+  const currentWeek = 1;
 
   const handleSubmit = async (entryId, week, team) => {
+    if (formState[entry.id]?.week !== currentWeek) {
+      alert('Picks can only be made for Week ${currentWeek}');
+      return;
+    }
     if (!week || !team) {
       setMessage("Please select both week and team.");
       return;
@@ -146,12 +151,10 @@ export default function Pick() {
                 <td>
                   <input
                     type="number"
-                    value={formState[entry.id]?.week || ''}
-                    onChange={(e) =>
-                      handleInputChange(entry.id, 'week', e.target.value)
-                    }
-                    min="1"
-                    required
+                    value={formState[entry.id]?.week || currentWeek}
+                    min={currentWeek}
+                    max={currentWeek}
+                    readOnly
                   />
                 </td>
                 <td>
