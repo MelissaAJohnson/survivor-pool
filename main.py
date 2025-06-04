@@ -1,12 +1,22 @@
 from fastapi import FastAPI, Form, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker, Session
 from models import Base, User, Entry, Pick, Team
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from jose import jwt, JWTError
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
+
+from dotenv import load_dotenv
+import os
+load_dotenv()
+
+SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
+EMAIL_FROM = os.getenv("EMAIL_FROM")
+FRONTEND_URL = os.getenv("FRONTEND_URL")
 
 #JWT Setup
 SECRET_KEY = "super-secret-key"
@@ -22,6 +32,7 @@ def hash_password(password: str):
 #Verify password
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
+
 # App init
 app = FastAPI()
 
@@ -40,8 +51,6 @@ engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(bind=engine)
 Base.metadata.create_all(bind=engine)
 
-
-
 # ✅ Dependency to get DB session
 def get_db():
     db = SessionLocal()
@@ -49,6 +58,25 @@ def get_db():
         yield db
     finally:
         db.close()
+
+#Send email verification
+def send_verification_email(to_email, token):
+    confirm_url = f"{token}"
+    message = Mail(
+        from_email=EMAIL_FROM,
+        to_emails=to_email,
+        subject="Confirm your Survivor Pool account",
+        html_content=f"""
+        <p>Click the link below to confirm your email:</p>
+        <a href="{confirm_url}">Confirm Email</a>
+        """,
+    )
+    try:
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
+        sg.send(message)
+        print(f"✅ Email sent to {to_email}")
+    except Exception as e:
+        print(f"❌ Email error: {e}")
 
 # ✅ Register a new user
 @app.post("/register")
@@ -68,13 +96,18 @@ def register_user(
     db.commit()
 
     #Generate token for email confirmation
-    token = jwt.encode({"sub": email}, SECRET_KEY, algorithm=ALGORITHM)
+    token_data = {"sub": email}
+    token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
+
     confirm_url = f"http://localhost:8000/confirm?token={token}"
+    send_verification_email(email, token)
 
     print("Email confirmation link", confirm_url)
 
-    return {"message": "User registered successfully. Please confirm your email.", "confirm_url": confirm_url}
-
+    return {
+        "message": "User registered successfully. Please confirm your email.",
+        "confirm_url": confirm_url
+    }
 
 # ✅ Confirm user
 @app.get("/confirm")
@@ -91,11 +124,12 @@ def confirm_email(token: str, db: Session = Depends(get_db)):
             return JSONResponse(status_code=404, content={"error": "User not found"})
 
         if user.verified:
-            return {"message": "Email already confirmed."}
+            return RedirectResponse(url=f"{FRONTEND_URL}/?confirmed=1", status_code=302)
 
         user.verified = True
         db.commit()
-        return {"message": "Email successfully confirmed!"}
+
+        return RedirectResponse(url=f"{FRONTEND_URL}/?confirmed=1", status_code=302)
 
     except JWTError as e:
         return JSONResponse(status_code=400, content={"error": f"Invalid or expired token: {str(e)}"})
