@@ -8,6 +8,7 @@ import Pick from './pages/Pick';
 import Admin from './pages/Admin';
 import GameAdmin from './pages/GameAdmin';
 import TeamAdmin from './pages/TeamAdmin';
+import TeamResultsAdmin from './pages/TeamResultsAdmin';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function AppContent() {
@@ -55,6 +56,12 @@ export default function App() {
           path="/teams" 
           element={<ProtectedRoute><TeamAdmin /></ProtectedRoute>} 
         />
+        <Route
+          path="team-results" element={
+            <ProtectedRoute>
+              <TeamResultsAdmin />
+            </ProtectedRoute>
+          } />
       </Routes>
     </div>
   );

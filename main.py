@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker, Session
-from models import Base, User, Entry, Pick, Team
+from models import Base, User, Entry, Pick, Team, TeamResult
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from jose import jwt, JWTError
@@ -389,3 +389,39 @@ def delete_team(team_id: int, db: Session = Depends(get_db)):
 def get_week_deadline(week: int) -> datetime:
     base_deadline = datetime(2025, 6, 7, 18, 0)
     return base_deadline + timedelta(weeks=week -1)
+
+# ✅ Game Results
+@app.post("/team-result")
+def set_team_result(
+    week: int = Form(...),
+    team: str = Form(...),
+    result: str = Form(...),
+    db: Session = Depends(get_db),
+    user = Depends(require_role(["admin"]))
+):
+    if result not in ["win", "loss"]:
+        raise HTTPException(status_code=400, detail="Result must be 'win' or 'loss")
+    
+    #Check if already exists
+    existing = db.query(TeamResult).filter_by(week=week, team=team).first()
+    if existing:
+        existing.result = result
+    else:
+        result_obj = TeamResult(week=week, team=team, result=result)
+        db.add(result_obj)
+        db.commit()
+        db.refresh(result_obj)
+        return {"message": f"Result for {team} in Week {week} set to {result_obj.result}"}
+
+@app.get("/team-results")
+def get_team_results(db: Session = Depends(get_db)):
+    results = db.query(TeamResult).all()
+    return [
+        {
+            "id": r.id,
+            "week": r.week,
+            "team": r.team,
+            "result": r.result
+        }
+        for r in results
+    ]

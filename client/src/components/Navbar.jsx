@@ -20,8 +20,13 @@ export default function Navbar() {
                         </Link>
                     )}
                     {userRole === "admin" && (
+                        <Link to="/team-results" style={{ marginRight: "1rem"}}>
+                            Game Results
+                        </Link>
+                    )}
+                    {userRole === "admin" && (
                         <Link to="/admin/game" style={{ marginRight: "1rem"}}>
-                            Manage Roles
+                            Roles
                         </Link>
                     )}
                     {userRole === "admin" && (

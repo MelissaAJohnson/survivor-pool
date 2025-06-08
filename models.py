@@ -41,3 +41,11 @@ class Team(Base):
     __tablename__ = "teams"
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=True, nullable=False)
+
+class TeamResult(Base):
+    __tablename__ = "team_results"
+
+    id = Column(Integer, primary_key=True, index=True)
+    week = Column(Integer, nullable=False)
+    team = Column(String, nullable=False)
+    result = Column(String, nullable=False)
