@@ -18,16 +18,26 @@ export default function EntryForm() {
   }, []);
 
   const fetchEntries = async (userEmail) => {
-    try {
-      const res = await fetch("http://localhost:8000/admin");
-      const data = await res.json();
-      const user = data.find(u => u.email === userEmail);
-      setEntries(user?.entries || []);
-    } catch (err) {
-      console.error("Failed to fetch entries:", err);
-      setMessage("Could not load entries.");
+  try {
+    const res = await fetch(`http://localhost:8000/entries?email=${userEmail}`, {
+      headers: {
+        "X-User-Email": userEmail,
+      },
+    });
+    const data = await res.json();
+
+    if (!Array.isArray(data)) {
+      console.error("Expected array but got:", data);
+      setMessage(data.detail || "Could not load entries.");
+      return;
     }
-  };
+
+    setEntries(data);
+  } catch (err) {
+    console.error("Failed to fetch entries:", err);
+    setMessage("Could not load entries.");
+  }
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
