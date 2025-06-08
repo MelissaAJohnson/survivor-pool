@@ -44,7 +44,7 @@ export default function GameAdmin() {
       formData.append("email", userEmail);
       formData.append("role", newRole);
 
-      const res = await fetch("http://localhost:8000/set-role", {
+      const res = await fetch("http://localhost:8000/update-role", {
         method: "POST",
         headers: {
           "X-User-Email": email,
