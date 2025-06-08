@@ -30,7 +30,8 @@ export default function LoginForm() {
       if (!res.ok) {
         setError(data.error || "Login failed.");
       } else {
-        login(inputEmail.trim().toLowerCase());
+        console.log("Login response:", data);
+        login(data.email, data.role);
 
         // Fetch entries to decide redirect
         const entriesRes = await fetch(`http://localhost:8000/entries?email=${inputEmail.trim().toLowerCase()}`);

@@ -6,6 +6,7 @@ import Register from './pages/Register';
 import EntryForm from './pages/EntryForm';
 import Pick from './pages/Pick';
 import Admin from './pages/Admin';
+import GameAdmin from './pages/GameAdmin';
 import TeamAdmin from './pages/TeamAdmin';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -46,6 +47,10 @@ export default function App() {
           path="/admin" 
           element={<ProtectedRoute><Admin /></ProtectedRoute>} 
         />
+        <Route
+          path="/admin/game" element={
+            <ProtectedRoute><GameAdmin /></ProtectedRoute>
+          } />
         <Route 
           path="/teams" 
           element={<ProtectedRoute><TeamAdmin /></ProtectedRoute>} 

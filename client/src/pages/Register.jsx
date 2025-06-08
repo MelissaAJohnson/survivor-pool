@@ -26,7 +26,7 @@ export default function Register() {
       if (!response.ok) {
         setError(data.error || "Registration failed.");
       } else {
-        alert("✅ Registered! Check the console for confirmation link.");
+        alert("✅ Registered! Check your email for confirmation link.");
         setEmail("");
         setPassword("");
       }

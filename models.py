@@ -2,6 +2,7 @@
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
+from database import Base
 
 Base = declarative_base()
 
@@ -12,7 +13,7 @@ class User(Base):
     email = Column(String, unique=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     verified = Column(Boolean, default=False)
-    role = Column(Boolean, default=False)
+    role = Column(String, default="player")
     entries = relationship("Entry", back_populates="user")
 
 class Entry(Base):

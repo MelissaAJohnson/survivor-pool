@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Form, Depends, HTTPException
+from fastapi import FastAPI, Form, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import create_engine, func
@@ -59,6 +59,21 @@ def get_db():
     finally:
         db.close()
 
+#Role-based decorators
+def require_role(required_roles: list):
+    def role_checker(request: Request, db: Session = Depends(get_db)):
+        email = request.headers.get("X-User-Email")  # Or from session, token, etc.
+        if not email:
+            raise HTTPException(status_code=401, detail="Missing user info")
+
+        user = db.query(User).filter_by(email=email).first()
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+        if user.role not in required_roles:
+            raise HTTPException(status_code=403, detail="Unauthorized")
+        return user
+    return role_checker
+
 #Send email verification
 def send_verification_email(to_email, token):
     confirm_url = f"{token}"
@@ -91,7 +106,7 @@ def register_user(
         return JSONResponse(status_code=400, content={"error": "User already exists"})
     
     hashed_pw = hash_password(password)
-    new_user = User(email=email, hashed_password=hashed_pw, verified=False)
+    new_user = User(email=email, hashed_password=hashed_pw, verified=False, role="player")
     db.add(new_user)
     db.commit()
 
@@ -255,12 +270,14 @@ def update_pick(
 
 # ✅ Show Users and their Entries
 @app.get("/admin")
-def admin_dashboard(db: Session = Depends(get_db)):
+def admin_dashboard(db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["manager", "admin"]))):
     users = db.query(User).all()
     result = []
     for user in users:
         user_data = {
             "email": user.email,
+            "role": user.role,
             "entries": []
         }
         for entry in user.entries:
@@ -292,17 +309,48 @@ def login_user(
     if not user.verified:
         return JSONResponse(status_code=403, content={"error": "Email not confirmed"})
 
-    return {"message": "Login successful", "email": user.email}
+    return {"message": "Login successful", "email": user.email, "role": user.role}
 
 # ✅ Allow Adminstrator to verify user's entry
 @app.post("/verify-entry")
-def verify_entry(entry_id: int = Form(...), db: Session = Depends(get_db)):
+def verify_entry(
+        entry_id: int = Form(...), 
+        user = Depends(require_role(["manager", "admin"])),
+        db: Session = Depends(get_db)
+    ):
     entry = db.query(Entry).filter(Entry.id == entry_id).first()
     if not entry:
         return {"error": "Entry not found"}
     entry.verified = True
     db.commit()
     return {"message": f"Entry '{entry.nickname}' verified"}
+
+# Allow Administrator to update roles
+@app.get("/admin/users")
+def user_admin_dashboard(
+    user = Depends(require_role(["admin"])),
+    db: Session = Depends(get_db)
+):
+    users = db.query(User).all()
+    return [{"email": u.email, "role": u.role} for u in users]
+
+@app.post("/update-role")
+def update_user_role(
+    email: str = Form(...),
+    role: str = Form(...),
+    user = Depends(require_role(["admin"])),
+    db: Session = Depends(get_db)
+):
+    user_to_update = db.query(User).filter(User.email == email).first()
+    if not user_to_update:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if role not in ["player", "manager", "admin"]:
+        raise HTTPException(status_code=400, detail="Invalid role")
+    
+    user_to_update.role = role
+    db.commit()
+    return {"message": f"Role for {email} set to {role}"}
 
 # ✅ Manage NFL Teams
 @app.get("/teams")
