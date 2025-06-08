@@ -16,7 +16,7 @@ export default function Navbar() {
                     <Link to="/entry" style={{ marginRight: "1rem" }}>Create Entry</Link>
                     <Link to="/pick" style={{ marginRight: "1rem" }}>My Picks</Link>
                     {(userRole === "manager" || userRole === "admin") && (
-                        <Link to="/admin" style={{ marginRight: "1rem" }}>  Admin
+                        <Link to="/admin" style={{ marginRight: "1rem" }}>  Users
                         </Link>
                     )}
                     {userRole === "admin" && (

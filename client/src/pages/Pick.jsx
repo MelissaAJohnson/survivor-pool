@@ -78,32 +78,40 @@ export default function Pick() {
     return Math.max(1, weekNumber); //never less than Week 1
   }
 
-  const handleSubmit = async (entryId, week, team) => {
-    if (formState[entry.id]?.week !== currentWeek) {
-      alert('Picks can only be made for Week ${currentWeek}');
+  const handleSubmit = async (entry) => {
+    const entryId = entry.id;
+    const team = formState[entry.id]?.team;
+
+    if (isWeekLocked(currentWeek)) {
+      alert(`Week ${currentWeek} is locked - picks are closed.`);
       return;
     }
-    if (!week || !team) {
-      setMessage("Please select both week and team.");
+    if (!team) {
+      setMessage("Please select team.");
       return;
     }
 
     const formData = new FormData();
     formData.append("entry_id", entryId);
-    formData.append("week", week);
+    formData.append("week", currentWeek);
     formData.append("team", team);
 
-    const res = await fetch("http://localhost:8000/pick", {
-      method: "POST",
-      body: formData,
-    });
+    try {
+      const res = await fetch("http://localhost:8000/pick", {
+        method: "POST",
+        body: formData,
+      });
 
-    const data = await res.json();
-    if (res.ok) {
-      setMessage(data.message);
-      fetchPicks(email);
-    } else {
-      setMessage(data.error || "Something went wrong.");
+      const data = await res.json();
+      if (res.ok) {
+        setMessage(data.message);
+        fetchPicks(email);
+      } else {
+        setMessage(data.error || "Something went wrong.");
+      }
+    } catch (err) {
+      console.error("Error submitting pick:", err);
+      alert("Failed to submit pick. Please try again.");
     }
   };
 
@@ -158,15 +166,7 @@ export default function Pick() {
             {entries.map(entry => (
               <tr key={entry.id}>
                 <td>{entry.nickname}</td>
-                <td>
-                  <input
-                    type="number"
-                    value={formState[entry.id]?.week || currentWeek}
-                    min={currentWeek}
-                    max={currentWeek}
-                    readOnly
-                  />
-                </td>
+                <td>{currentWeek}</td>
                 <td>
                   <select
                     value={formState[entry.id]?.team || ''}
@@ -193,7 +193,7 @@ export default function Pick() {
                     disabled={isWeekLocked(formState[entry.id]?.week)}
                     style={{ opacity: isWeekLocked(formState[entry.id]?.week) ? 0.5 : 1 }}
                     onClick={() => 
-                      handleSubmit(entry.id, formState[entry.id]?.week, formState[entry.id]?.team)}>
+                      handleSubmit(entry)}>
                     Submit Pick
                   </button>
                 </td>
@@ -217,21 +217,7 @@ export default function Pick() {
           {existingPicks.map((pick) => (
             <tr key={pick.id}>
               <td>{pick.entry_nickname}</td>
-              <td>
-                <input
-                  type="number"
-                  value={pick.week}
-                  onChange={(e) =>
-                    setExistingPicks((prev) =>
-                      prev.map((p) =>
-                        p.id === pick.id
-                          ? { ...p, week: e.target.value }
-                          : p
-                      )
-                    )
-                  }
-                />
-              </td>
+              <td>{pick.week}</td>
               <td>
                 <select
                   value={pick.team}
