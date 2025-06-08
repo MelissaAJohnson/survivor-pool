@@ -47,6 +47,7 @@ export default function GameAdmin() {
       const res = await fetch("http://localhost:8000/update-role", {
         method: "POST",
         headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
           "X-User-Email": email,
         },
         body: formData,

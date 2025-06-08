@@ -215,12 +215,13 @@ export default function Pick() {
         </thead>
         <tbody>
           {existingPicks.map((pick) => (
-            <tr key={pick.id}>
+            <tr key={pick.id} style={{ opacity: isWeekLocked(pick.week) ? 0.6 : 1 }}>
               <td>{pick.entry_nickname}</td>
               <td>{pick.week}</td>
               <td>
                 <select
                   value={pick.team}
+                  disabled={isWeekLocked(pick.week)}
                   onChange={(e) =>
                     setExistingPicks((prev) =>
                       prev.map((p) =>
