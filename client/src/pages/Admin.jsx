@@ -1,13 +1,25 @@
 // client/src/pages/Admin.jsx
 import React, { useEffect, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 export default function Admin () {
   const [users, setUsers] = useState([]);
+  const { email } = useAuth();
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch("http://localhost:8000/admin");
+      const res = await fetch("http://localhost:8000/admin", {
+        headers: {
+          "X-User-Email": email
+        }
+      });
+
       const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.detail || "Failed to load users");
+      }
+
       setUsers(data);
     } catch (err) {
       console.error("Failed to load admin data:", err);
@@ -24,6 +36,7 @@ export default function Admin () {
         body: formData,
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
+          "X-User-Email": email
         },
       });
   
@@ -36,12 +49,14 @@ export default function Admin () {
   };
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    if (email) {
+      fetchUsers();
+    }
+  }, [email]);
 
   return (
     <div>
-      <h2>Admin Panel</h2>
+      <h2>Users</h2>
       {users.map(user => (
         <div key={user.email} style={{ marginBottom: '30px' }}>
           <h3>{user.email}</h3>
